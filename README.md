@@ -5,7 +5,7 @@ and checkout pull requests.
 
 ## Installation
 
-    gh extension install mislav/gh-branch
+    gh extension install mloberg/gh-prs
 
 To use this, you will need [fzf](https://github.com/junegunn/fzf#readme). To
 intall with Homebrew:
