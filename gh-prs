@@ -1,0 +1,77 @@
+#!/bin/bash
+set -e
+
+help() {
+  cat <<EOF
+Usage: gh prs
+
+Display an interactive list of open PRs. The selected PR is checked out.
+
+Options:
+    --static    Prints a non-interactive list of open PRs
+    --help      Show this message
+
+Dependencies: fzf
+EOF
+}
+
+list_prs() {
+  # shellcheck disable=SC2016
+  gh api graphql --cache=5m -F owner='{owner}' -F repo='{repo}' -f query='
+    query ($owner: String!, $repo: String!) {
+      repository(owner: $owner, name: $repo) {
+        pullRequests(first: 100, states: [OPEN]) {
+          nodes {
+            number
+            title
+            author {
+              login
+            }
+            state
+            headRefName
+          }
+        }
+      }
+    }
+  ' --template '
+    {{- range .data.repository.pullRequests.nodes -}}
+      {{- .number | printf "#%.0f\t" | color "green" -}}
+      {{- .title | printf "%s\t" -}}
+      {{- .headRefName | printf "%s\t" | color "cyan" -}}
+      {{- .author.login | printf " by %s\t" -}}
+      {{- .state | printf "%s\n" -}}
+    {{- end -}}
+  ' | column -t -s$'\t'
+}
+
+while test $# != 0; do
+  case "$1" in
+    --help|-h)
+      help
+      exit
+      ;;
+    --static)
+      static=1
+      ;;
+    *)
+      help >&2
+      exit 1
+    ;;
+  esac
+  shift
+done
+
+if [ -n "$static" ]; then
+  list_prs
+  exit
+fi
+
+# Make sure fzf is available
+if ! type -p fzf >/dev/null; then
+  echo "fzf not found on the system" >&2
+  exit 1
+fi
+
+selected=$(fzf --ansi <<<"$(list_prs)")
+[ -n "$selected" ] || exit 1
+gh pr checkout "${selected%% *}"
