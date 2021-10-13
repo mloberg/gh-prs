@@ -11,7 +11,7 @@ Options:
     --static    Prints a non-interactive list of open PRs
     --help      Show this message
 
-Dependencies: fzf
+Dependencies: fzf or sk
 EOF
 }
 
@@ -66,12 +66,20 @@ if [ -n "$static" ]; then
   exit
 fi
 
-# Make sure fzf is available
-if ! type -p fzf >/dev/null; then
-  echo "fzf not found on the system" >&2
-  exit 1
+# Make sure fzf or sk is available
+declare -a selectors=("fzf" "sk")
+selector=""
+for s in "${selectors[@]}"; do
+  if type -p "$s" >/dev/null; then
+    selector=$s
+    break
+  fi
+done
+
+if [[ ! -n ${selector} ]]; then
+  echo "${selectors[@]} are not found on the system" >&2
 fi
 
-selected=$(fzf --ansi <<<"$(list_prs)")
+selected=$("$selector" --ansi <<<"$(list_prs)")
 [ -n "$selected" ] || exit 1
 gh pr checkout "${selected%% *}"
