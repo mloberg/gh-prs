@@ -8,7 +8,7 @@ Usage: gh prs
 Display an interactive list of open PRs. The selected PR is checked out.
 
 Options:
-    --static    Prints a non-interactive list of open PRs
+    --list|-l   Prints a non-interactive list of open PRs
     --help      Show this message
 
 Dependencies: fzf
@@ -50,7 +50,7 @@ while test $# != 0; do
       help
       exit
       ;;
-    --static)
+    --static|--list|-l)
       static=1
       ;;
     *)
