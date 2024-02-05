@@ -8,19 +8,23 @@ Usage: gh prs
 Display an interactive list of open PRs. The selected PR is checked out.
 
 Options:
-    --list|-l   Prints a non-interactive list of open PRs
-    --help      Show this message
+    --list|-l     Prints a non-interactive list of open PRs
+    --reverse|-r  Show oldest PRs first
+    --help        Show this message
 
 Dependencies: fzf
 EOF
 }
 
 list_prs() {
+  direction="DESC"
+  [ "$1" == "1" ] && direction="ASC"
+
   # shellcheck disable=SC2016
-  gh api graphql --cache=5m -F owner='{owner}' -F repo='{repo}' -f query='
-    query ($owner: String!, $repo: String!) {
+  gh api graphql --cache=5m -F owner='{owner}' -F repo='{repo}' -F direction="$direction" -f query='
+    query ($owner: String!, $repo: String!, $direction: OrderDirection!) {
       repository(owner: $owner, name: $repo) {
-        pullRequests(first: 100, states: [OPEN]) {
+        pullRequests(first: 100, states: [OPEN], orderBy: { field: UPDATED_AT, direction: $direction }) {
           nodes {
             number
             title
@@ -53,6 +57,9 @@ while test $# != 0; do
     --static|--list|-l)
       static=1
       ;;
+    --reverse|-r)
+      reverse=1
+      ;;
     *)
       help >&2
       exit 1
@@ -62,7 +69,7 @@ while test $# != 0; do
 done
 
 if [ -n "$static" ]; then
-  list_prs
+  list_prs "$reverse"
   exit
 fi
 
@@ -72,6 +79,6 @@ if ! type -p fzf >/dev/null; then
   exit 1
 fi
 
-selected=$(fzf --ansi <<<"$(list_prs)")
+selected=$(fzf --ansi <<<"$(list_prs "$reverse")")
 [ -n "$selected" ] || exit 1
 gh pr checkout "${selected%% *}"
